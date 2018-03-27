@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf8">
+<title>Mojibake Steganography</title>
+<style type="text/css">
+/* https://stackoverflow.com/questions/18539711/input-widths-on-bootstrap-3 */
+.form-control-inline {
+    min-width: 0 !important;
+    width: auto !important;
+    display: inline !important;
+}
+</style>
+<link rel="stylesheet" href="https://ipfs.io/ipfs/QmPEJx9Bur2NNDPtBNT5zQ6bBnCkgYtKeNBAWRXx4j5hf2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+<h1>Mojibake Steganography</h1>
+
+<p>This tool encodes each byte of input as a higher Unicode codepoint, selected at random within a configurable range. E.g. an 'A' (ASCII 0x41, Unicode u+0041) might become Unicode u+5e41 (&#x5e41;), rendering it totally unintelligible to a casual viewer. The decoding process takes each character of input and
+returns its Unicode codepoint modulo 256 to retrieve a single byte. It also uses UTF-8 to encode wide characters
+from the plaintext, so is fully Unicode-safe.</p>
+
+Codepoint range (hex): <input class="form-control form-control-inline" id="mincp"> - <input class="form-control form-control-inline" id="maxcp"><br>
+
+Preset:
+<select id="preset" class="form-control form-control-inline">
+<option value="mojibake">Mojibake</option>
+<option value="cjk">CJK</option>
+<option value="braille">Braille</option>
+<option value="pipes">Pipes</option>
+<option value="symbols">Symbols</option>
+<option value="utf8">Just UTF-8</option>
+</select>
+
+<div class="row">
+    <div class="col-md-6">
+        <textarea class="form-control" id="plain" placeholder="Unencoded data..." rows="20"></textarea>
+        <button class="btn btn-lg btn-primary" id="encode">Encode &raquo;</button>
+    </div>
+    <div class="col-md-6">
+        <textarea class="form-control" id="encoded" placeholder="Encoded data..." rows="20"></textarea>
+        <button class="btn btn-lg btn-primary" id="decode">&laquo; Decode</button>
+    </div>
+</div>
+
+<br>
+
+<p><i>By <a href="http://incoherency.co.uk/">James Stanley</a>.</i></p>
+
+</div>
+<script src="https://ipfs.io/ipfs/QmVvNwVXecuvQtKxwPuL1L58UPh9EYDU5iQSLjeN3S2sto/jquery-3.2.1.min.js"></script>
+<script src="https://ipfs.io/ipfs/QmPEJx9Bur2NNDPtBNT5zQ6bBnCkgYtKeNBAWRXx4j5hf2/js/bootstrap.min.js"></script>
+<script type="text/javascript">
+var mincp = {
+    "mojibake": 0x100,
+    "cjk": 0x4e00,
+    "braille": 0x2800,
+    "pipes": 0x2500,
+    "symbols": 0x2600,
+    "utf8": 0x00,
+};
+var maxcp = {
+    "mojibake": 0x30ff,
+    "cjk": 0x9fff,
+    "braille": 0x28ff,
+    "pipes": 0x25ff,
+    "symbols": 0x27ff,
+    "utf8": 0xff,
+};
+
+$('#encode').click(function(e) {
+    e.preventDefault();
+
+    var mincp = parseInt($('#mincp').val(),16);
+    var maxcp = parseInt($('#maxcp').val(),16);
+    if (maxcp < mincp) {
+        maxcp = mincp + 255;
+        $('#maxcp').val(maxcp.toString(16));
+    }
+    mincp = Math.floor(mincp / 256);
+    maxcp = Math.floor(maxcp / 256);
+
+    var plain = encode_utf8($('#plain').val());
+    var encoded = '';
+    for (var i = 0; i < plain.length; i++) {
+        encoded += String.fromCharCode(plain.charCodeAt(i) + 256 * (Math.floor(Math.random() * (maxcp - mincp + 1)) + mincp));
+    }
+    $('#encoded').val(encoded);
+});
+
+$('#decode').click(function(e) {
+    e.preventDefault();
+
+    var data = $('#encoded').val();
+    var plain = '';
+    for (var i = 0; i < data.length; i++) {
+        plain += String.fromCharCode(data.charCodeAt(i) % 256);
+    }
+    $('#plain').val(decode_utf8(plain));
+});
+
+$('#preset').change(function() {
+    $('#mincp').val(mincp[$('#preset').val()].toString(16));
+    $('#maxcp').val(maxcp[$('#preset').val()].toString(16));
+});
+
+$('#preset').change();
+
+// https://ecmanaut.blogspot.co.uk/2006/07/encoding-decoding-utf8-in-javascript.html
+function encode_utf8(s) {
+  return unescape(encodeURIComponent(s));
+}
+function decode_utf8(s) {
+  return decodeURIComponent(escape(s));
+}
+</script>
+</body>
+</html>
